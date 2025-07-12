@@ -38,8 +38,6 @@ public class SoftBot extends Bot {
 
     @Override
     public boolean sense() {
-
-        senseActions++;
         
         // If rat is in current cell, return true
         if (map[x][y].ratStatus == RatStatus.HasRat) {

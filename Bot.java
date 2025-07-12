@@ -8,14 +8,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
 
-public abstract class Bot {
+public class Bot {
     public int x, y;     
     public Cell[][] map;            // Map of ship
     public Ship ship;               // Original ship
     public int dimension;           // Dimension of ship
-    public int unexploredCount;     // Number of explored cells
     public int movesTaken = 0;      // Track number of moves taken
-    public int senseActions = 0;    // Track number of sense actions taken
+    public double[][][][] T; // T[bx][by][rx][ry] = expected moves to catch rat
+    public double[][][][] optimalAction;
+
+
+    // T(b_x, b_y, r_x, r_y) = min over actions a [1 + Σ P(next_state | current_state, a) * T(next_state)]
 
     public int getX() {
      return x; 
@@ -31,14 +34,37 @@ public abstract class Bot {
         this.ship = ship;
         this.map = ship.getCell();
         this.dimension = ship.getDimension();
-        this.unexploredCount = dimension * dimension;
+        this.T = new double[dimension][dimension][dimension][dimension];
+
 
         // Set x and y to a random open cell in ship's map.
         getStartingPoint(seed);
 
+        // Initialize T array, setting all values to 
+        initializeT();
+
     }
 
-    public abstract boolean sense();
+    private void initializeT() {
+        // Initialize all values
+        for (int bx = 0; bx < dimension; bx++) {
+            for (int by = 0; by < dimension; by++) {
+                for (int rx = 0; rx < dimension; rx++) {
+                    for (int ry = 0; ry < dimension; ry++) {
+                        if (!map[bx][by].isOpen() || !map[rx][ry].isOpen()) {
+                            // Invalid States
+                            T[bx][by][rx][ry] = Double.POSITIVE_INFINITY;
+                        } else if (bx == rx && by == ry) {
+                            // Bot and rat in same cell
+                            T[bx][by][rx][ry] = 0.0;
+                        } else {
+                            T[bx][by][rx][ry] = Double.POSITIVE_INFINITY;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     public boolean move(int new_X, int new_Y) {
         // If the moved spot is within the ship's bounds
@@ -198,18 +224,6 @@ public abstract class Bot {
             }
             System.out.println();
         }
-    }
-
-    public void markCell(int x, int y, Status newStatus) {
-        Cell cell = map[x][y];
-        if (cell.status == Status.UNKNOWN) {
-            cell.status = newStatus;
-            unexploredCount--;
-        }
-    }
- 
-    public boolean isFullyExplored() {
-        return unexploredCount == 0;
     }
 
     public int getNumberOfMoves() {
