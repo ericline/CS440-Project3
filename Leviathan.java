@@ -1,20 +1,31 @@
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class Leviathan {
     static int dimension = 30;
     static double p = 0.5; 
+    static ArrayList<Integer> movesMade = new ArrayList<>();
+
     public static void main(String[] args) {
-        int[] seeds = new int[20];
+        int[] seeds = new int[30];
         for (int i = 0; i < seeds.length; i++) {
             seeds[i] = i + 1;
         }
-        Ship ship = Ship.shipGenerator(dimension, p, seeds[1]);
-        Bot bot = new Bot(ship, seeds[1]);
+
         
-        int maxSteps = 1000;
+        for (int seed : seeds) {
+            runTest(seed);
+        }
+
+
+        System.out.println("Average Moves: " + Stats.computeMean(movesMade));
+
+    }
+
+    public static void runTest(int seed) {
+        Ship ship = Ship.shipGenerator(dimension, p, seed);
+        Bot bot = new Bot(ship, seed);
+        int maxSteps = 5000;
         int step = 0;
 
         while (step < maxSteps) {
@@ -33,29 +44,20 @@ public class Leviathan {
             if (!success) {
                 break;
             }
-
             step++;
         }
 
-        System.out.println("Test Finished.");
+        movesMade.add(bot.getNumberOfMoves());
+        System.out.println("Test " + seed + " Finished.");
         System.out.println("Bot took " + bot.getNumberOfMoves() + " moves.");
-    }
-
-    private static double averageSum(List<Integer> a, List<Integer> b) {
-        if (a.size() != b.size() || a.isEmpty()) return -1;
-        double total = 0;
-        for (int i = 0; i < a.size(); i++) {
-            total += a.get(i) + b.get(i);
-        }
-        return total / a.size();
     }
 
     // Helper function to print Average, Standard Error, and Required Sample Size
     public static void printStats(ArrayList<Double> pair) {
-        System.out.printf("%-12s %10s %10s\n", "", "Moves", "Senses");
+        //System.out.printf("%-12s %10s %10s\n", "", "Moves", "Senses");
         System.out.printf("%-12s %10.2f %10.2f\n", "Average:", pair.get(0), pair.get(1));
         //System.out.printf("%-12s %10.2f %10.2f\n", "SE:", pair.get(2), pair.get(3));
-        //System.out.printf("%-12s %10d %10d\n\n", "Required N:", (int)Math.ceil(pair.get(4)), (int)Math.ceil(pair.get(5)));
+        System.out.printf("%-12s %10d %10d\n\n", "Required N:", (int)Math.ceil(pair.get(4)), (int)Math.ceil(pair.get(5)));
         System.out.println();
     }
 

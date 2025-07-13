@@ -40,8 +40,6 @@ public class Bot {
         // Initialize T array, setting all values to 
         initializeT();
 
-        printTForRat(ship.getRatCell().x, ship.getRatCell().y);
-
         // Compute T
         computeT();
 
@@ -69,70 +67,81 @@ public class Bot {
 
     public void computeT() {
     
-        double[][][][] newT = new double[dimension][dimension][dimension][dimension];
+        int iterations = dimension * 2;
+        for (int i = 0; i < iterations; i++) {
+            double[][][][] newT = new double[dimension][dimension][dimension][dimension];
 
-        // Initialize newT with current T values
-        for (int bx = 0; bx < dimension; bx++) {
-            for (int by = 0; by < dimension; by++) {
-                for (int rx = 0; rx < dimension; rx++) {
-                    for (int ry = 0; ry < dimension; ry++) {
-                        newT[bx][by][rx][ry] = T[bx][by][rx][ry];
+            System.out.println(i);
+            double maxChange = 0.0;
+
+            // Initialize newT with current T values
+            for (int bx = 0; bx < dimension; bx++) {
+                for (int by = 0; by < dimension; by++) {
+                    for (int rx = 0; rx < dimension; rx++) {
+                        for (int ry = 0; ry < dimension; ry++) {
+                            newT[bx][by][rx][ry] = T[bx][by][rx][ry];
+                        }
                     }
                 }
             }
-        }
 
-        // Iterate over all possible bot positions
-        for (int bx = 0; bx < dimension; bx++) {
-            for (int by = 0; by < dimension; by++) {
-                if(!map[bx][by].isOpen()) continue;
-                
-                // Iterate over all possible rat positions
-                for (int rx = 0; rx < dimension; rx++) {
-                    for (int ry = 0; ry < dimension; ry++) {
-                        if(!map[rx][ry].isOpen()) continue;
+            // Iterate over all possible bot positions
+            for (int bx = 0; bx < dimension; bx++) {
+                for (int by = 0; by < dimension; by++) {
+                    if(!map[bx][by].isOpen()) continue;
+                    
+                    // Iterate over all possible rat positions
+                    for (int rx = 0; rx < dimension; rx++) {
+                        for (int ry = 0; ry < dimension; ry++) {
+                            if(!map[rx][ry].isOpen()) continue;
 
-                        // Base Case: bot and rat in same cell
-                        if (bx == rx && by == ry) {
-                            newT[bx][by][rx][ry] = 0.0;
-                            continue;
-                        }
-
-                        double best = Double.POSITIVE_INFINITY;
-                        List<Cell> botMoves = map[bx][by].getOpenNeighbors();
-                        
-                        // For every possible bot move
-                        for (Cell botMove : botMoves) {
-                            double sum = 0.0;
-                            List<Cell> ratMoves = map[rx][ry].getOpenNeighbors();
-                            
-                            // For every possible rat move
-                            for(Cell ratMove : ratMoves) {
-                                if (botMove.x == ratMove.x && botMove.y == ratMove.y) {
-                                    // Bot and rat end up in same cell
-                                    sum += 0.0;
-                                } else {
-                                    // Add expected moves from the resulting configuration
-                                    sum += T[botMove.x][botMove.y][ratMove.x][ratMove.y];
-                                }
+                            // Base Case: bot and rat in same cell
+                            if (bx == rx && by == ry) {
+                                newT[bx][by][rx][ry] = 0.0;
+                                continue;
                             }
 
-                            // Expected future cost (average over all equally likely rat moves)
-                            double expected = sum / ratMoves.size();
-                            // Total cost: 1 move now + expected future cost
-                            double cost = 1.0 + expected;
-                            best = Math.min(best, cost);
-                        }
+                            double best = Double.POSITIVE_INFINITY;
+                            List<Cell> botMoves = map[bx][by].getOpenNeighbors();
+                            
+                            // For every possible bot move
+                            for (Cell botMove : botMoves) {
+                                double sum = 0.0;
+                                List<Cell> ratMoves = map[rx][ry].getOpenNeighbors();
+                                
+                                // For every possible rat move
+                                for(Cell ratMove : ratMoves) {
+                                    if (botMove.x == ratMove.x && botMove.y == ratMove.y) {
+                                        // Bot and rat end up in same cell
+                                        sum += 0.0;
+                                    } else {
+                                        // Add expected moves from the resulting configuration
+                                        sum += T[botMove.x][botMove.y][ratMove.x][ratMove.y];
+                                    }
+                                }
 
-                        // Update the new T value for this bot-rat configuration
-                        newT[bx][by][rx][ry] = best;
+                                // Expected future cost (average over all equally likely rat moves)
+                                double expected = sum / ratMoves.size();
+                                // Total cost: 1 move now + expected future cost
+                                double cost = 1.0 + expected;
+                                best = Math.min(best, cost);
+                            }
+
+                            // Update the new T value for this bot-rat configuration
+                            newT[bx][by][rx][ry] = best;
+                            double change = Math.abs(T[bx][by][rx][ry] - best);
+                            if (change > maxChange) {
+                                maxChange = change;
+                            }
+                        }
                     }
                 }
             }
-        }
+            System.out.printf("Max change in iteration %d: %.6f\n", i, maxChange);
 
-        // Update T with new values
-        T = newT;
+            // Update T with new values
+            T = newT;
+        }
     }
 
     private double expectedMovesForBotAction(Cell botMove, int rx, int ry) {
@@ -177,11 +186,15 @@ public class Bot {
             }
         }
 
-        boolean success = move(optimalMove.x, optimalMove.y);
-        if (success && ratMove()) {
-            return success;
+        boolean botMoved = move(optimalMove.x, optimalMove.y);
+        if (botMoved && x == ratX && y == ratY) {
+            return true;
         }
-        System.out.println("Optimal bot move error.");
+        boolean ratMoved = ratMove();
+        if (ratMoved && botMoved) {
+            return true;
+        }
+
         return false;
     }
 
