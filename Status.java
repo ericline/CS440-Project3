@@ -4,9 +4,6 @@ public enum Status {
     OPEN("Open"),
     UNKNOWN("UNKNOWN");
 
-    private final String status;
-
     Status(String status) {
-        this.status = status;
     }
 }
