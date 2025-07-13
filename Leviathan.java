@@ -46,6 +46,10 @@ public class Leviathan {
             }
             step++;
         }
+        if (step > maxSteps) {
+            System.out.println("Some shit went down, that ain't normal");
+            return;
+        }
 
         movesMade.add(bot.getNumberOfMoves());
         System.out.println("Test " + seed + " Finished.");
