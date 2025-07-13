@@ -7,7 +7,7 @@ public class Leviathan {
     static ArrayList<Integer> movesMade = new ArrayList<>();
 
     public static void main(String[] args) {
-        int[] seeds = new int[30];
+        int[] seeds = new int[100];
         for (int i = 0; i < seeds.length; i++) {
             seeds[i] = i + 1;
         }
