@@ -7,7 +7,7 @@ public class Ship{
     private Cell[][] cell;
     int numOfOpenCells = 0;
     static Random random;
-    private Cell ratCell = null; 
+    public Cell ratCell = null; 
     protected int nodesProcessed = 0;
 
 
@@ -66,7 +66,7 @@ public class Ship{
                 for (int j = 0; j < dimension; j++) {
                     // System.out.println("Checking cell at (" + i + ", " + j + ")");
                     if (!ship.cell[i][j].isOpen()) {
-                        if (ship.cell[i][j].getOpenNeighbors() == 1) {
+                        if (ship.cell[i][j].getNumOfOpenNeighbors() == 1) {
                             qualifiedCells.add(ship.cell[i][j]);
                         }
                     }
@@ -92,7 +92,7 @@ public class Ship{
         for(int i = 0; i < dimension; i++) {
             for (int j = 0; j < dimension; j++) {
                 Cell currCell = ship.cell[i][j];
-                if (currCell.isOpen() && currCell.getOpenNeighbors() == 1) {
+                if (currCell.isOpen() && currCell.getNumOfOpenNeighbors() == 1) {
                     iniDeadEndCount++;
                     deadEndCells.add(currCell);
                 }
@@ -124,7 +124,7 @@ public class Ship{
                 curDeadEndCount--;
 
                 // Check if selectedNbh now became a new dead end
-                if (selectedNbh.getOpenNeighbors() == 1) {
+                if (selectedNbh.getNumOfOpenNeighbors() == 1) {
                     deadEndCells.add(selectedNbh);
                 }
 
@@ -138,6 +138,7 @@ public class Ship{
             int c = random.nextInt(dimension);
             rat = ship.cell[r][c];
         } while (!rat.isOpen());
+        rat.placeRat();
         ship.ratCell = rat;  
 
         return ship;
@@ -168,18 +169,6 @@ public class Ship{
         if(!openCells.isEmpty()) {
             openCells.get(random.nextInt(openCells.size())).placeRat();
         }
-    }
-
-    public Cell getSpaceRat() {
-        for (int i = 0; i < dimension; i++) {
-            for (int j = 0; j < dimension; j++) {
-                if(cell[i][j].ratStatus == RatStatus.HasRat) {
-                    return cell[i][j];
-                }
-            }
-        }
-        System.out.println("No set space rat");
-        return null;
     }
 
     public Cell[][] getCells() {

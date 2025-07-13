@@ -47,15 +47,29 @@ public class Cell implements Comparable<Cell>{
         this.ratStatus = RatStatus.HasRat;
     }
 
+    public void removeRat() {
+        this.ratStatus = RatStatus.NoRat;
+    }
+
     public void addNeighbor(Cell cell) {
         neighbors.add(cell);
     }
 
-    public int getOpenNeighbors() {
+    public int getNumOfOpenNeighbors() {
         openNeighbors = 0;
         for (Cell neighbor : neighbors) {
             if (neighbor.isOpen()) {
                 openNeighbors++;
+            }
+        }
+        return openNeighbors;
+    }
+
+    public ArrayList<Cell> getOpenNeighbors() {
+        ArrayList<Cell> openNeighbors = new ArrayList<>();
+        for (Cell neighbor : neighbors) {
+            if (neighbor.isOpen()) {
+                openNeighbors.add(neighbor);
             }
         }
         return openNeighbors;

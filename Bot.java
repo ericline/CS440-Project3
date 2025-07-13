@@ -14,11 +14,8 @@ public class Bot {
     public Ship ship;               // Original ship
     public int dimension;           // Dimension of ship
     public int movesTaken = 0;      // Track number of moves taken
-    public double[][][][] T; // T[bx][by][rx][ry] = expected moves to catch rat
-    public double[][][][] optimalAction;
-
-
-    // T(b_x, b_y, r_x, r_y) = min over actions a [1 + Σ P(next_state | current_state, a) * T(next_state)]
+    public double[][][][] T;        // T[bx][by][rx][ry] = expected moves to catch rat
+    public Random rand;
 
     public int getX() {
      return x; 
@@ -35,7 +32,7 @@ public class Bot {
         this.map = ship.getCell();
         this.dimension = ship.getDimension();
         this.T = new double[dimension][dimension][dimension][dimension];
-
+        this.rand = new Random(seed);
 
         // Set x and y to a random open cell in ship's map.
         getStartingPoint(seed);
@@ -43,27 +40,163 @@ public class Bot {
         // Initialize T array, setting all values to 
         initializeT();
 
+        printTForRat(ship.getRatCell().x, ship.getRatCell().y);
+
+        // Compute T
+        computeT();
+
     }
 
     private void initializeT() {
-        // Initialize all values
         for (int bx = 0; bx < dimension; bx++) {
             for (int by = 0; by < dimension; by++) {
+                if (!map[bx][by].isOpen()) continue; // skip blocked
+
                 for (int rx = 0; rx < dimension; rx++) {
                     for (int ry = 0; ry < dimension; ry++) {
-                        if (!map[bx][by].isOpen() || !map[rx][ry].isOpen()) {
-                            // Invalid States
-                            T[bx][by][rx][ry] = Double.POSITIVE_INFINITY;
-                        } else if (bx == rx && by == ry) {
-                            // Bot and rat in same cell
-                            T[bx][by][rx][ry] = 0.0;
+                        if (!map[rx][ry].isOpen()) continue; // skip blocked
+
+                        if (bx == rx && by == ry) {
+                            T[bx][by][rx][ry] = 0.0; // same cell, 0 moves needed
                         } else {
-                            T[bx][by][rx][ry] = Double.POSITIVE_INFINITY;
+                            T[bx][by][rx][ry] = manhattan_distance(new Cell(bx, by, Status.OPEN), new Cell(rx, ry, Status.OPEN)); // large initial guess
                         }
                     }
                 }
             }
         }
+    }
+
+    public void computeT() {
+    
+        double[][][][] newT = new double[dimension][dimension][dimension][dimension];
+
+        // Initialize newT with current T values
+        for (int bx = 0; bx < dimension; bx++) {
+            for (int by = 0; by < dimension; by++) {
+                for (int rx = 0; rx < dimension; rx++) {
+                    for (int ry = 0; ry < dimension; ry++) {
+                        newT[bx][by][rx][ry] = T[bx][by][rx][ry];
+                    }
+                }
+            }
+        }
+
+        // Iterate over all possible bot positions
+        for (int bx = 0; bx < dimension; bx++) {
+            for (int by = 0; by < dimension; by++) {
+                if(!map[bx][by].isOpen()) continue;
+                
+                // Iterate over all possible rat positions
+                for (int rx = 0; rx < dimension; rx++) {
+                    for (int ry = 0; ry < dimension; ry++) {
+                        if(!map[rx][ry].isOpen()) continue;
+
+                        // Base Case: bot and rat in same cell
+                        if (bx == rx && by == ry) {
+                            newT[bx][by][rx][ry] = 0.0;
+                            continue;
+                        }
+
+                        double best = Double.POSITIVE_INFINITY;
+                        List<Cell> botMoves = map[bx][by].getOpenNeighbors();
+                        
+                        // For every possible bot move
+                        for (Cell botMove : botMoves) {
+                            double sum = 0.0;
+                            List<Cell> ratMoves = map[rx][ry].getOpenNeighbors();
+                            
+                            // For every possible rat move
+                            for(Cell ratMove : ratMoves) {
+                                if (botMove.x == ratMove.x && botMove.y == ratMove.y) {
+                                    // Bot and rat end up in same cell
+                                    sum += 0.0;
+                                } else {
+                                    // Add expected moves from the resulting configuration
+                                    sum += T[botMove.x][botMove.y][ratMove.x][ratMove.y];
+                                }
+                            }
+
+                            // Expected future cost (average over all equally likely rat moves)
+                            double expected = sum / ratMoves.size();
+                            // Total cost: 1 move now + expected future cost
+                            double cost = 1.0 + expected;
+                            best = Math.min(best, cost);
+                        }
+
+                        // Update the new T value for this bot-rat configuration
+                        newT[bx][by][rx][ry] = best;
+                    }
+                }
+            }
+        }
+
+        // Update T with new values
+        T = newT;
+    }
+
+    private double expectedMovesForBotAction(Cell botMove, int rx, int ry) {
+        // If bot and rat are in same cell after bot's move
+        if (botMove.x == rx && botMove.y == ry) {
+            return 1.0; // Just this one move needed
+        }
+        
+        // Calculate expected value over all possible rat responses
+        double sum = 0.0;
+        List<Cell> ratMoves = map[rx][ry].getOpenNeighbors();
+        
+        for (Cell ratMove : ratMoves) {
+            if (ratMove == botMove) {
+                // Rat moves to same cell as bot
+                sum += 0.0;
+            } else {
+                // Add the expected moves from the resulting configuration
+                sum += T[botMove.x][botMove.y][ratMove.x][ratMove.y];
+            }
+        }
+        
+        double expectedFutureMoves = sum / ratMoves.size();
+        return 1.0 + expectedFutureMoves; // 1 move now + expected future moves
+    }
+
+    public boolean makeOptimalMove(int ratX, int ratY) {
+        Cell optimalMove = null;
+        double bestExpectedMoves = Double.POSITIVE_INFINITY;
+        
+        // Consider all possible bot moves
+        List<Cell> possibleMoves = map[x][y].getOpenNeighbors();
+        
+        for (Cell botMove : possibleMoves) {
+            
+            // Calculate expected number of moves if bot moves to this cell
+            double expectedMoves = expectedMovesForBotAction(botMove, ratX, ratY);
+            
+            if (expectedMoves < bestExpectedMoves) {
+                bestExpectedMoves = expectedMoves;
+                optimalMove = botMove;
+            }
+        }
+
+        boolean success = move(optimalMove.x, optimalMove.y);
+        if (success && ratMove()) {
+            return success;
+        }
+        System.out.println("Optimal bot move error.");
+        return false;
+    }
+
+    public boolean ratMove() {
+        Cell current = ship.getRatCell();
+        List<Cell> neighbors = current.getOpenNeighbors();
+        if (!neighbors.isEmpty()) {
+            current.removeRat();
+            Cell next = neighbors.get(rand.nextInt(neighbors.size()));
+            next.placeRat();
+            ship.ratCell = next;
+            return true;
+        }
+        System.out.println("Rat move error.");
+        return false;
     }
 
     public boolean move(int new_X, int new_Y) {
@@ -79,6 +212,25 @@ public class Bot {
         }
         // Else no move
         return false;
+    }
+
+    public void printTForRat(int rx, int ry) {
+        System.out.println("T(bx, by, rx=" + rx + ", ry=" + ry + "):\n");
+        for (int bx = 0; bx < dimension; bx++) {
+            for (int by = 0; by < dimension; by++) {
+                if (!map[bx][by].isOpen()) {
+                    System.out.print(" XX ");
+                } else {
+                    double value = T[bx][by][rx][ry];
+                    if (value == Double.POSITIVE_INFINITY)
+                        System.out.print(" INF");
+                    else
+                        System.out.printf("%4.1f", value);
+                }
+                System.out.print(" ");
+            }
+            System.out.println();
+        }
     }
 
     // A* Algorithm with Manhattan Distance Heuristic
