@@ -152,31 +152,7 @@ public class Bot {
         } while (maxChange > 1e-6);
     }
 
-    // Calculate expected moves if bot moves into a given cell, given the rat's current location
-    private double expectedMovesForBotAction(Cell botMove, int rx, int ry) {
-        // If bot and rat are in same cell after bot's move
-        if (botMove.x == rx && botMove.y == ry) {
-            return 1.0; // Just this one move needed
-        }
-        
-        // Calculate expected value over all possible rat responses
-        double sum = 0.0;
-        List<Cell> ratMoves = map[rx][ry].getOpenNeighbors();
-        
-        for (Cell ratMove : ratMoves) {
-            if (ratMove == botMove) {
-                // Rat moves to same cell as bot
-                sum += 0.0;
-            } else {
-                // Add the expected moves from the resulting configuration
-                sum += T[botMove.x][botMove.y][ratMove.x][ratMove.y];
-            }
-        }
-        
-        double expectedFutureMoves = sum / ratMoves.size();
-        return 1.0 + expectedFutureMoves; // 1 move now + expected future moves
-    }
-
+    // Make optimal move by choosing move with minimal T value utility
     public boolean makeOptimalMove(int ratX, int ratY) {
         Cell optimalMove = null;
         double bestExpectedMoves = Double.POSITIVE_INFINITY;
@@ -188,7 +164,6 @@ public class Bot {
         for (Cell botMove : possibleMoves) {
             
             // Calculate expected number of moves if bot moves to this cell
-            //double expectedMoves = expectedMovesForBotAction(botMove, ratX, ratY);
             double tValue = T[botMove.x][botMove.y][ratX][ratY];
 
             if (tValue < bestExpectedMoves) {
