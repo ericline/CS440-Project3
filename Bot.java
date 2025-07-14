@@ -67,12 +67,12 @@ public class Bot {
 
     public void computeT() {
     
-        int iterations = dimension * 2;
-        for (int i = 0; i < iterations; i++) {
+        int iterations = 0;
+        double maxChange;
+        do {
             double[][][][] newT = new double[dimension][dimension][dimension][dimension];
 
-            System.out.println(i);
-            double maxChange = 0.0;
+            maxChange = 0.0;
 
             // Initialize newT with current T values
             for (int bx = 0; bx < dimension; bx++) {
@@ -99,7 +99,12 @@ public class Bot {
                             if (bx == rx && by == ry) {
                                 newT[bx][by][rx][ry] = 0.0;
                                 continue;
+                            // Base Case: bot and rat are in adjacent cells
+                            } else if (manhattan_distance(new Cell(bx, by, Status.OPEN), new Cell(rx, ry, Status.OPEN)) == 1) {
+                                newT[bx][by][rx][ry] = 1.0;
+                                continue;
                             }
+                            
 
                             double best = Double.POSITIVE_INFINITY;
                             List<Cell> botMoves = map[bx][by].getOpenNeighbors();
@@ -111,18 +116,19 @@ public class Bot {
                                 
                                 // For every possible rat move
                                 for(Cell ratMove : ratMoves) {
-                                    if (botMove.x == ratMove.x && botMove.y == ratMove.y) {
-                                        // Bot and rat end up in same cell
+                                    if (ratMove == botMove) {
+                                        // Rat moves to same cell as bot
                                         sum += 0.0;
                                     } else {
-                                        // Add expected moves from the resulting configuration
+                                        // Add the expected moves from the resulting configuration
                                         sum += T[botMove.x][botMove.y][ratMove.x][ratMove.y];
                                     }
                                 }
 
                                 // Expected future cost (average over all equally likely rat moves)
                                 double expected = sum / ratMoves.size();
-                                // Total cost: 1 move now + expected future cost
+
+                                // Total cost: 1 move now (immediate cost) + expected future cost
                                 double cost = 1.0 + expected;
                                 best = Math.min(best, cost);
                             }
@@ -130,6 +136,7 @@ public class Bot {
                             // Update the new T value for this bot-rat configuration
                             newT[bx][by][rx][ry] = best;
                             double change = Math.abs(T[bx][by][rx][ry] - best);
+
                             if (change > maxChange) {
                                 maxChange = change;
                             }
@@ -137,13 +144,15 @@ public class Bot {
                     }
                 }
             }
-            System.out.printf("Max change in iteration %d: %.6f\n", i, maxChange);
+            System.out.printf("Max change in iteration %d: %.6f\n", iterations, maxChange);
 
             // Update T with new values
             T = newT;
-        }
+            iterations++;
+        } while (maxChange > 1e-6);
     }
 
+    // Calculate expected moves if bot moves into a given cell, given the rat's current location
     private double expectedMovesForBotAction(Cell botMove, int rx, int ry) {
         // If bot and rat are in same cell after bot's move
         if (botMove.x == rx && botMove.y == ry) {
@@ -175,13 +184,15 @@ public class Bot {
         // Consider all possible bot moves
         List<Cell> possibleMoves = map[x][y].getOpenNeighbors();
         
+        // For each bot move, select the move that minimizes the expected moves.
         for (Cell botMove : possibleMoves) {
             
             // Calculate expected number of moves if bot moves to this cell
-            double expectedMoves = expectedMovesForBotAction(botMove, ratX, ratY);
-            
-            if (expectedMoves < bestExpectedMoves) {
-                bestExpectedMoves = expectedMoves;
+            //double expectedMoves = expectedMovesForBotAction(botMove, ratX, ratY);
+            double tValue = T[botMove.x][botMove.y][ratX][ratY];
+
+            if (tValue < bestExpectedMoves) {
+                bestExpectedMoves = tValue;
                 optimalMove = botMove;
             }
         }
@@ -191,11 +202,7 @@ public class Bot {
             return true;
         }
         boolean ratMoved = ratMove();
-        if (ratMoved && botMoved) {
-            return true;
-        }
-
-        return false;
+        return ratMoved && botMoved;
     }
 
     public boolean ratMove() {
