@@ -10,7 +10,7 @@ public class Leviathan {
     static ArrayList<Integer> movesMade = new ArrayList<>();
 
     public static void main(String[] args) {
-        int[] seeds = new int[2];
+        int[] seeds = new int[10];
         for (int i = 0; i < seeds.length; i++) {
             seeds[i] = i + 1;
         }
@@ -22,8 +22,7 @@ public class Leviathan {
 
         System.out.println("Average Moves: " + Stats.computeMean(movesMade));
 
-
-        //generateTrainingData(3);
+        // generateTrainingData(3);
     }
 
     public static void runTest(int seed) {
