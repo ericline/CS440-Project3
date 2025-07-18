@@ -22,7 +22,6 @@ t_max = raw_targets.max()
 targets = 2 * (raw_targets - t_min) / (t_max - t_min) - 1
 
 # Histogram of raw t_value
-
 plt.figure(figsize=(6, 4))
 plt.hist(df["t_value"], bins=50, color='skyblue', edgecolor='black')
 plt.title("Histogram of Original t_value")
@@ -62,14 +61,34 @@ class Net(nn.Module):
 model = Net()
 print(model)
 
+# Evaluate initial model before training
+with torch.no_grad():
+    initial_predictions = model(x_test).numpy()
+    initial_true_values = y_test.numpy()
+
+initial_predictions_actual = (initial_predictions + 1) / 2 * (t_max - t_min) + t_min
+initial_true_values_actual = (initial_true_values + 1) / 2 * (t_max - t_min) + t_min
+
+plt.figure(figsize=(6, 6))
+plt.scatter(initial_true_values_actual, initial_predictions_actual, alpha=0.6, color='salmon', edgecolor='black')
+plt.plot([initial_true_values_actual.min(), initial_true_values_actual.max()],
+         [initial_true_values_actual.min(), initial_true_values_actual.max()],
+         color='blue', linestyle='--', label='Ideal Prediction')
+plt.xlabel("True t_value")
+plt.ylabel("Predicted t_value")
+plt.title("Initial Model: Predicted vs True t_value (Actual Scale)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
 # Training setup
 alpha = 0.0001
 batch_size = 320
-epochs = 30
+epochs = 10
 train_losses = []
 test_losses = []
 
-# Optimizer and loss function
 optimizer = torch.optim.Adam(model.parameters(), lr=alpha)
 criterion = nn.MSELoss()
 
@@ -91,7 +110,6 @@ for epoch in range(epochs):
     avg_train_loss = total_loss / num_batches
     train_losses.append(avg_train_loss)
 
-    # Evaluate
     with torch.no_grad():
         test_predictions = model(x_test)
         test_mse = criterion(test_predictions, y_test).item()
@@ -99,11 +117,11 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch+1}: Train Loss = {avg_train_loss:.6f}, Test Loss = {test_mse:.6f}")
 
-# Final RMSE in normalized and actual scale
+# Final RMSE
 test_rmse = np.sqrt(test_losses[-1])
-test_rmse_actual = test_rmse * (t_max - t_min) / 2 
-print(f"\nFinal Normalized RMSE: {test_rmse:.4f}")
-print(f"Final Actual RMSE: {test_rmse_actual:.2f}")
+test_rmse_actual = test_rmse * (t_max - t_min) / 2
+# print(f"Final Normalized RMSE: {test_rmse:.4f}")
+# print(f"Final Actual RMSE: {test_rmse_actual:.2f}")
 
 # Plot loss curves
 plt.plot(range(epochs), train_losses, label="Training Loss", marker='o')
@@ -113,6 +131,27 @@ plt.ylabel("Loss")
 plt.title("Training vs Testing Loss")
 plt.legend()
 plt.grid(True)
+plt.show()
+
+# Final prediction scatter plot
+with torch.no_grad():
+    final_predictions = model(x_test).numpy()
+    true_values = y_test.numpy()
+
+final_predictions_actual = (final_predictions + 1) / 2 * (t_max - t_min) + t_min
+true_values_actual = (true_values + 1) / 2 * (t_max - t_min) + t_min
+
+plt.figure(figsize=(6, 6))
+plt.scatter(true_values_actual, final_predictions_actual, alpha=0.6, color='mediumseagreen', edgecolor='black')
+plt.plot([true_values_actual.min(), true_values_actual.max()],
+         [true_values_actual.min(), true_values_actual.max()],
+         color='red', linestyle='--', label='Ideal Prediction')
+plt.xlabel("True t_value")
+plt.ylabel("Predicted t_value")
+plt.title("Final Model: Predicted vs True t_value (Actual Scale)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
 plt.show()
 
 
