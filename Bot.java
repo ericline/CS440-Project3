@@ -104,7 +104,6 @@ public class Bot {
                                 continue;
                             }
                             
-
                             double best = Double.POSITIVE_INFINITY;
                             List<Cell> botMoves = map[bx][by].getOpenNeighbors();
                             
@@ -150,6 +149,39 @@ public class Bot {
             iterations++;
         } while (maxChange > 1e-6);
     }
+
+    public void reportUnchangedTValues() {
+    int unchangedCount = 0;
+    int totalCount = 0;
+
+    for (int bx = 0; bx < dimension; bx++) {
+        for (int by = 0; by < dimension; by++) {
+            if (!map[bx][by].isOpen()) continue;
+
+            for (int rx = 0; rx < dimension; rx++) {
+                for (int ry = 0; ry < dimension; ry++) {
+                    if (!map[rx][ry].isOpen()) continue;
+
+                    if (bx == rx && by == ry) continue;  
+
+                    double initial = manhattan_distance(map[bx][by], map[rx][ry]);
+                    double finalT = T[bx][by][rx][ry];
+
+                    // If value equals to initial Manhattan distance
+                    if (Math.abs(finalT - initial) < 1e-6) {
+                        unchangedCount++;
+                    }
+
+                    totalCount++;
+                }
+            }
+        }
+    }
+
+    System.out.printf("Unchanged T values: %d out of %d (%.2f%%)\n", 
+        unchangedCount, totalCount, 100.0 * unchangedCount / totalCount);
+}
+
 
     // Make optimal move by choosing move with minimal T value utility
     public boolean makeOptimalMove(int ratX, int ratY) {

@@ -9,23 +9,28 @@ from sklearn.model_selection import train_test_split
 # Load CSV
 df = pd.read_csv("ship_1_data.csv")
 
-# Normalize input features and targets
-features = df[["bx", "by", "rx", "ry"]].values / 29.0 - 0.5
+# Normalize input features to (-1, 1)
+features_raw = df[["bx", "by", "rx", "ry"]].values
+f_min = features_raw.min(axis=0)
+f_max = features_raw.max(axis=0)
+features = 2 * (features_raw - f_min) / (f_max - f_min) - 1
+
+# Normalize targets to (-1, 1)
 raw_targets = df["t_value"].values.reshape(-1, 1)
 t_min = raw_targets.min()
 t_max = raw_targets.max()
-targets = (raw_targets - t_min) / (t_max - t_min)
+targets = 2 * (raw_targets - t_min) / (t_max - t_min) - 1
 
 # Histogram of raw t_value
-plt.figure(figsize=(5, 4))
 
-plt.hist(raw_targets.flatten(), bins=50, color='skyblue', edgecolor='black')
-plt.title("Distribution of raw t_value")
+plt.figure(figsize=(6, 4))
+plt.hist(df["t_value"], bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of Original t_value")
 plt.xlabel("t_value")
 plt.ylabel("Count")
-
+plt.grid(True)
+plt.tight_layout()
 plt.show()
-
 
 # Convert to tensors
 x_data = torch.tensor(features, dtype=torch.float32)
@@ -36,7 +41,7 @@ x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=0.
 
 def get_batch(x, y, batch_size):
     n = x.shape[0]
-    batch_indices = random.sample([i for i in range(n)], k=batch_size)
+    batch_indices = random.sample(range(n), k=batch_size)
     x_batch = x[batch_indices]
     y_batch = y[batch_indices]
     return x_batch, y_batch
@@ -45,24 +50,22 @@ def get_batch(x, y, batch_size):
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.layer_1 = nn.Linear(in_features=4, out_features=64, bias=True)
-        self.layer_2 = nn.Linear(in_features=64, out_features=32, bias=True)
-        # self.layer_3 = nn.Linear(in_features=64, out_features=32, bias=True)
-        self.out = nn.Linear(32, 1)
+        self.layer_1 = nn.Linear(in_features=4, out_features=128, bias=True)
+        self.layer_2 = nn.Linear(in_features=128, out_features=64, bias=True)
+        self.out = nn.Linear(64, 1)
 
     def forward(self, x):
         x = torch.relu(self.layer_1(x))
         x = torch.relu(self.layer_2(x))
-        # x = torch.relu(self.layer_3(x))
         return self.out(x)
 
 model = Net()
 print(model)
 
 # Training setup
-alpha = 0.1
-batch_size = 1024
-epochs = 50
+alpha = 0.0001
+batch_size = 320
+epochs = 30
 train_losses = []
 test_losses = []
 
@@ -70,13 +73,12 @@ test_losses = []
 optimizer = torch.optim.Adam(model.parameters(), lr=alpha)
 criterion = nn.MSELoss()
 
-# Training loop using custom get_batch()
+# Training loop
 for epoch in range(epochs):
-    # model.train()
     total_loss = 0.0
-
     num_batches = len(x_train) // batch_size
-    for batch in range(num_batches):
+
+    for _ in range(num_batches):
         x_batch, y_batch = get_batch(x_train, y_train, batch_size)
 
         optimizer.zero_grad()
@@ -89,8 +91,7 @@ for epoch in range(epochs):
     avg_train_loss = total_loss / num_batches
     train_losses.append(avg_train_loss)
 
-    # Testing
-    # model.eval()
+    # Evaluate
     with torch.no_grad():
         test_predictions = model(x_test)
         test_mse = criterion(test_predictions, y_test).item()
@@ -98,10 +99,9 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch+1}: Train Loss = {avg_train_loss:.6f}, Test Loss = {test_mse:.6f}")
 
-
-# Final RMSE in original scale
+# Final RMSE in normalized and actual scale
 test_rmse = np.sqrt(test_losses[-1])
-test_rmse_actual = test_rmse * (t_max - t_min)
+test_rmse_actual = test_rmse * (t_max - t_min) / 2 
 print(f"\nFinal Normalized RMSE: {test_rmse:.4f}")
 print(f"Final Actual RMSE: {test_rmse_actual:.2f}")
 
@@ -114,6 +114,7 @@ plt.title("Training vs Testing Loss")
 plt.legend()
 plt.grid(True)
 plt.show()
+
 
 
 

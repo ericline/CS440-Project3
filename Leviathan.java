@@ -10,7 +10,7 @@ public class Leviathan {
     static ArrayList<Integer> movesMade = new ArrayList<>();
 
     public static void main(String[] args) {
-        int[] seeds = new int[10];
+        int[] seeds = new int[1];
         for (int i = 0; i < seeds.length; i++) {
             seeds[i] = i + 1;
         }
@@ -22,12 +22,15 @@ public class Leviathan {
 
         System.out.println("Average Moves: " + Stats.computeMean(movesMade));
 
-        // generateTrainingData(3);
+        // generateTrainingData(1);
+        generateTrainingDataWithLayout(1);
     }
 
     public static void runTest(int seed) {
         Ship ship = Ship.shipGenerator(dimension, p, seed);
+        // ShipViewer.show(ship.getCells(), "seed");
         Bot bot = new Bot(ship, seed);
+        // bot.reportUnchangedTValues();
         int maxSteps = 5000;
         int step = 0;
 
@@ -142,5 +145,72 @@ public class Leviathan {
         ret.add(Stats.computeRequiredSampleSize(senses));
         return ret;
     }
+
+    /*
+     * 0 - close
+     * 1 - open
+     * @param tests
+     */
+
+    public static void generateTrainingDataWithLayout(int tests) {
+    for (int i = 1; i <= tests; i++) {
+        Ship ship = Ship.shipGenerator(dimension, p, i);
+        Bot bot = new Bot(ship, i);
+
+        String filename = "ship_" + i + "_data_with_layout.json";
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("{");
+
+            writer.println("  \"layout\": [");
+            for (int x = 0; x < dimension; x++) {
+                writer.print("    [");
+                for (int y = 0; y < dimension; y++) {
+                    writer.print(bot.map[x][y].isOpen() ? "1" : "0");
+                    if (y < dimension - 1) writer.print(", ");
+                }
+                writer.println(x < dimension - 1 ? "]," : "]");
+            }
+            writer.println("  ],");
+
+            writer.println("  \"configurations\": [");
+
+            int validConfigurations = 0;
+            boolean first = true;
+
+            for (int bx = 0; bx < dimension; bx++) {
+                for (int by = 0; by < dimension; by++) {
+                    if (!bot.map[bx][by].isOpen()) continue;
+
+                    for (int rx = 0; rx < dimension; rx++) {
+                        for (int ry = 0; ry < dimension; ry++) {
+                            if (!bot.map[rx][ry].isOpen()) continue;
+
+                            double tValue = bot.T[bx][by][rx][ry];
+                            if (!first) writer.println(",");
+                            writer.print("    {");
+                            writer.printf("\"bx\": %d, \"by\": %d, \"rx\": %d, \"ry\": %d, \"t_value\": %.4f",
+                                bx, by, rx, ry, tValue);
+                            writer.print("}");
+                            first = false;
+                            validConfigurations++;
+                        }
+                    }
+                }
+            }
+
+            writer.println();
+            writer.println("  ]");
+            writer.println("}");
+
+            System.out.println("Ship " + i + ":");
+            System.out.println("  Valid configurations: " + validConfigurations);
+            System.out.println("  Output file: " + filename);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
 
 }
