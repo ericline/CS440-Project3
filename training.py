@@ -29,7 +29,8 @@ plt.xlabel("t_value")
 plt.ylabel("Count")
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+plt.savefig("histogram_t_value.png")
+plt.close()
 
 # Convert to tensors
 x_data = torch.tensor(features, dtype=torch.float32)
@@ -80,12 +81,13 @@ plt.title("Initial Model: Predicted vs True t_value (Actual Scale)")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
+plt.savefig("initial_model_scatter.png")
+plt.close()
 
 # Training setup
 alpha = 0.0001
 batch_size = 320
-epochs = 10
+epochs = 100
 train_losses = []
 test_losses = []
 
@@ -124,6 +126,7 @@ test_rmse_actual = test_rmse * (t_max - t_min) / 2
 # print(f"Final Actual RMSE: {test_rmse_actual:.2f}")
 
 # Plot loss curves
+plt.figure()
 plt.plot(range(epochs), train_losses, label="Training Loss", marker='o')
 plt.plot(range(epochs), test_losses, label="Testing Loss", marker='o')
 plt.xlabel("Epoch")
@@ -131,7 +134,9 @@ plt.ylabel("Loss")
 plt.title("Training vs Testing Loss")
 plt.legend()
 plt.grid(True)
-plt.show()
+plt.tight_layout()
+plt.savefig("loss_curve.png")
+plt.close()
 
 # Final prediction scatter plot
 with torch.no_grad():
@@ -152,8 +157,7 @@ plt.title("Final Model: Predicted vs True t_value (Actual Scale)")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.show()
-
-
+plt.savefig("final_model_scatter.png")
+plt.close()
 
 
